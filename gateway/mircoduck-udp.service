@@ -1,0 +1,29 @@
+[Unit]
+Description=mircoduck-lew authenticated phone UDP adapter
+After=network-online.target robotd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -B /opt/mircoduck-lew/gateway/server.py --key-file /etc/mircoduck-lew/udp.key --port 20043
+Restart=on-failure
+RestartSec=2
+KillSignal=SIGINT
+TimeoutStopSec=5
+User=root
+Nice=10
+CPUQuota=50%
+MemoryMax=512M
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/run /etc/systemd/system/robotd.service.d /etc/robot/feetech-ft5 /opt/robot/feetech-ft5-r5 /var/lib/robot /var/log
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
+CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_FOWNER
+
+[Install]
+WantedBy=multi-user.target

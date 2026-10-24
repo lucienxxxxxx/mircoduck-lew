@@ -1,6 +1,6 @@
 {
   "project": "mircoduck-lew",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "owner": "lucienxxxxxx",
   "service_build": "1fa8438-feetech-control.43-ft01.1",
   "api_version": 40,
@@ -35,6 +35,21 @@
     "qemu_deployment_info": true,
     "upgrade_zip_integrity": true,
     "privacy_scan": true,
-    "source_artifact_hardware_tested": false
+    "source_artifact_hardware_tested": false,
+    "python_selected_passed": 20,
+    "flutter_tests_passed": 6,
+    "flutter_analyze": "no issues",
+    "flutter_live_board_test": true,
+    "udp_live_neutral_claim_expiry_test": true
+  },
+  "phone": {
+    "framework": "Flutter 3.47.7 / Dart 3.13.5",
+    "package": "com.lucien.microduck_lew",
+    "version": "0.2.0+2",
+    "udp_protocol": 1,
+    "port": 20043,
+    "robotd_binary_changed": false,
+    "android_phone_install_tested": false,
+    "motion_tested": false
   }
 }

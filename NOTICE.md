@@ -7,6 +7,11 @@
   Personal Non-Commercial license; the Rust runtime remains Apache-2.0.
 - lucienxxxxxx / mircoduck-lew: local Feetech v0.1 IMU integration, commissioning
   report fix, console compatibility fix, source organization and documentation.
+- The Android app continues the user's earlier independently developed Flutter
+  phone console, with Microduck-specific UDP transport, 15-joint telemetry and
+  controls. Its independent source is Apache-2.0. Flutter/Dart and Gradle retain
+  their own notices. The gateway reuses the console input helper under that
+  helper's existing Personal Non-Commercial license.
 - Three.js authors: console/static/vendor, MIT; see console/licenses/THREE-MIT.txt.
 - Pollen Robotics/model contributors: optional duck geometry, upstream declared
   Creative Commons BY-SA-NC without a precise version; see console/licenses/MODEL-NOTICE.md.

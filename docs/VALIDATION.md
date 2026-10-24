@@ -1,5 +1,38 @@
 # Validation record
 
+## Phone / UDP 0.2.0 (2026-10-24)
+
+- Flutter 3.47.7, Dart 3.13.5, JDK17, Android build tools 36.0.0; ARM64 APK,
+  minimum Android API24 / Android 7.0, target API36. Personal test signing,
+  APK v2 signature verified; not a Play Store release.
+- `flutter analyze`: no issues. Six automated App tests pass, covering phone
+  layout, two pointers, protocol vectors and real local UDP sockets. The
+  optional live-board test is skipped unless explicit host/key-file variables
+  are provided; it was separately run and passed against the installed board.
+- Twenty Python checks pass on Linux, including console compatibility,
+  HMAC tamper rejection, replay/endpoint rejection, kernel ownership exclusion,
+  ticket rotation/absolute expiry, neutral input expiry and native telemetry.
+- Real LAN UDP validation: wrong key gets no response; correct key receives
+  fresh IMU data and all 15 joints. The IMU counter advances. Neutral claim,
+  300 ms input expiry despite heartbeats, and delayed-frame rejection pass.
+  The observed largest datagram was under 700 bytes.
+- The Flutter client itself authenticated to the real board and read fresh
+  15-joint / IMU telemetry, while remaining unclaimed.
+- The installed robotd binary is unchanged. The console helper was updated
+  and reconnected to share the same ownership lock as the phone adapter.
+- Final extended observation recorded three communication failures in roughly
+  66,000 cycles; the latest timeout named servo IDs 11 and 14. Current status
+  recovered to ready at approximately 50 Hz with valid IMU data. This is not
+  a claim of an error-free bus; no cause or gait reliability was established.
+- No actual Android phone installation, gait/standing acceptance, or physical
+  restore-image flashing/boot acceptance was performed. Hardware validation
+  stayed in commissioning with torque OFF. Service mode changes must be
+  confirmed and checked against actual status; accepting a request does not
+  prove its completion.
+
+The personal restore image is a separate private deliverable. It preserves
+the owner's calibration and credentials, and is not part of the public source.
+
 ## Existing deployment evidence (2026-10-24)
 
 - Rust 1.99.1; ARM64 Linux release build in WSL Ubuntu.

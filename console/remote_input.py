@@ -9,7 +9,7 @@ import sys
 import time
 
 LEGACY_NAME = 'Microduck R17 Web Xbox'
-BUTTONS = {'start', 'select', 'a', 'b', 'x', 'y', 'rb'}
+BUTTONS = {'start', 'select', 'a', 'b', 'x', 'y', 'lb', 'rb'}
 AXES = {'lx', 'ly', 'rx', 'ry', 'lt', 'rt', 'dx', 'dy'}
 
 
@@ -93,11 +93,13 @@ class Robot:
 
 
 class Input:
-    def __init__(self, robot, clock=time.monotonic):
+    def __init__(self, robot, clock=time.monotonic, lease_path='/run/lock/mircoduck-input.lock'):
         self.robot, self.clock = robot, clock
+        self.lease_path = lease_path
         self.real, self.owner, self.deadline, self.failure = [], None, None, None
         self.events = lambda: None
         self.event_epoch = 0
+        self.owner_lock = None
         self.reset()
     def reset(self):
         self.previous, self.mode = set(), 'drive'
@@ -125,6 +127,9 @@ class Input:
             except (OSError, ValueError):
                 self.robot.close()
         self.owner, self.deadline = None, None
+        if self.owner_lock is not None:
+            os.close(self.owner_lock)
+            self.owner_lock = None
         self.reset()
     def hotplug(self, current):
         changed = current != self.real
@@ -175,10 +180,20 @@ class Input:
             return self.status(False, self.failure or '实体手柄已接管；网页输入已丢弃')
         if self.owner is not None and self.owner != owner:
             return self.status(False, '另一网页正在控制；等待其释放输入')
+        if self.owner_lock is None:
+            # Shared across the console's SSH helper and the phone UDP adapter.
+            # Kernel locks disappear on process death; do not trust a PID file.
+            import fcntl
+            fd = os.open(self.lease_path, os.O_RDONLY | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW, 0o644)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                os.close(fd)
+                return self.status(False, '另一控制台或手机正在控制；请先释放')
+            self.owner_lock = fd
         self.owner = owner
         event_epoch = self.event_epoch
-        active = bool(buttons) or any(axes.values())
-        self.deadline = self.clock() + .6 if active else None
+        self.deadline = self.clock() + .6
         context = request.get('context') or {}
         settings = context.get('settings') or {}
         head = settings.get('head_rad', 2.5)
@@ -220,11 +235,11 @@ class Input:
                 intent('robot.relax')
             self.select_at = None
         # Bindings come from the authoritative feedback already received by the PC.
-        if self.bindings is None and (down & {'a','x','rb'} or axes['dy'] == 1):
+        if self.bindings is None and (down & {'a','x','lb','rb'} or axes['dy'] == 1):
             report=intent('pad.bindings')
             self.bindings={row['button']:row['skill'] for row in report['bindings']}
         bindings = self.bindings or {}
-        skills = [bindings.get(button) for button in down & {'a','x','rb'}]
+        skills = [bindings.get(button) for button in down & {'a','x','lb','rb'}]
         if axes['dy'] == 1 and 'dpad_down' not in self.previous:
             skills.append(bindings.get('dpad_down'))
         for skill in skills:
