@@ -16,6 +16,7 @@ void main() {
     String sid = '';
     int sequence = 0, frames = 0;
     bool claimed = false, publishStatus = true;
+    Map<String, dynamic>? lastFrame;
     void send(Map<String, dynamic> fields) {
       final to = endpoint;
       if (to == null) return;
@@ -51,6 +52,7 @@ void main() {
             });
           case 'frame':
             frames++;
+            lastFrame = Map<String, dynamic>.from(m['frame']);
           case 'release':
             claimed = false;
             send({
@@ -72,6 +74,7 @@ void main() {
           'mode': 'motion',
           'homed': true,
           'policy': true,
+          'torque': true,
           'claimed': claimed
         });
       }
@@ -89,6 +92,18 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
       expect(frames, greaterThan(1));
       expect(client.axes['ly'], -.125);
+      client.setDrive(.5, -.5, .65);
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      expect(lastFrame!['axes']['lx'],
+          0); // Horizontal motion turns, without sideways movement.
+      expect(lastFrame!['axes']['ly'], -.325);
+      expect(lastFrame!['axes']['rx'], .325);
+      await client.startLongCall();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(lastFrame!['axes']['lt'], 1);
+      client.endLongCall();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(lastFrame!['axes']['lt'], 0);
       publishStatus =
           false; // Pongs still arrive; stale robot feedback must release input.
       await Future<void>.delayed(const Duration(milliseconds: 760));

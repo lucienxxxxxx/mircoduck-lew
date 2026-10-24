@@ -25,7 +25,7 @@ After hello, each request echoes a server-issued `ticket`. Tickets rotate approx
 | claim | Explicit neutral frame, obtains shared kernel input lease if available. Does not HOME or enable torque |
 | frame | `frame:{axes:{lx,ly,rx,ry,lt,rt,dx,dy},buttons:[...]}`; requires claimed session |
 | release | Clears this phone's continuous input and lease; optional `disconnect:true` also closes the session for immediate reconnect; no implicit relax/shutdown |
-| action | Fixed actions `home`, `relax`, `policy-off`, `motion`, `commissioning`, or allowlisted skills; requires claim |
+| action | Fixed actions `home`, `relax`, `policy-off`, `policy-on`, `chirp`, `motion`, `commissioning`, or allowlisted skills; requires claim |
 
 Axes are finite numbers in [-1,1], except LT/RT in [0,1]. Direction axes are -1/0/1. Buttons: start/select/a/b/x/y/lb/rb; the App exposes explicit confirmed relax instead of raw Select/shutdown. The shared helper enforces the existing R17 intent mapping and authoritative `pad.bindings` lookup.
 
@@ -35,7 +35,14 @@ Axes are finite numbers in [-1,1], except LT/RT in [0,1]. Direction axes are -1/
 
 ## Telemetry
 
-`status` includes actual mode/phase/build, sample age and freshness, homed/policy/torque, loop Hz, gravity `g`, gyro (rad/s), IMU valid/sequence, physical-gamepad presence and current input mode. Unknown fields are null, not fabricated zeros. Freshness combines source sample age with adapter receive age; motion also requires recent robot.state subscription data.
+`status` includes actual mode/phase/build, sample age and freshness, homed/policy/torque, loop Hz, gravity `g`, gyro (rad/s), IMU valid/sequence, physical-gamepad presence and current input mode. It also includes `sitting` and available `skills`, refreshed from robot.policies. Unknown fields are null, not fabricated zeros. Freshness combines source sample age with adapter receive age; motion also requires recent robot.state subscription data.
+
+DuckPilot 0.3 adds fixed actions `policy-on` (robot.enable on=true) and `chirp`
+(robot.sound chirp), and uses the actual `sit_toggle` skill name. Legacy
+`sitstand` is translated to `sit_toggle`. Continuous long-call input uses the
+existing LT mapping with the same expiry behavior. These are additive v1 fields
+and actions. The UI acquires the lease internally on explicit user input; hello
+and camera connection still emit no actuator commands.
 
 Two `joints` packets carry parts 0 and 1 (8 and 7 rows). Each row:
 

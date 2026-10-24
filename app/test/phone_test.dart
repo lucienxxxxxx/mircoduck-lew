@@ -6,8 +6,67 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:microduck_lew/main.dart';
 import 'package:microduck_lew/widgets/phone_stick.dart';
+import 'package:microduck_lew/widgets/camera_backdrop.dart';
 
 void main() {
+  testWidgets(
+      'small phone keeps a clear center and a compact scrollable action panel',
+      (tester) async {
+    tester.view.physicalSize = const Size(640, 320);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const ConsoleApp());
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('left-stick')), findsOneWidget);
+    expect(find.byKey(const Key('right-stick')), findsNothing);
+    final actions = find.widgetWithText(ListView, '前滚');
+    expect(tester.getSize(actions).width, lessThan(400));
+    await tester.drag(actions, const Offset(-220, 0));
+    await tester.pump();
+    expect(find.text('右踢').hitTestable(), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('selected startup image opens into the pilot view',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final root = GlobalKey();
+    await tester.pumpWidget(
+        RepaintBoundary(key: root, child: const ConsoleApp(showStartup: true)));
+    expect(find.text('鸭控 · DuckPilot'), findsOneWidget);
+    final output = Platform.environment['PREVIEW_STARTUP_OUTPUT'];
+    if (output != null) {
+      await tester.runAsync(() async {
+        final path = Platform.environment['PREVIEW_FONT'];
+        if (path != null) {
+          final loader = FontLoader('Roboto')
+            ..addFont(
+                File(path).readAsBytes().then((b) => ByteData.sublistView(b)));
+          await loader.load();
+        }
+        await precacheImage(const AssetImage('assets/startup-controller.png'),
+            root.currentContext!);
+      });
+      await tester.pump();
+      await tester.runAsync(() async {
+        final boundary =
+            root.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        final image = await boundary.toImage(pixelRatio: 2);
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        await File(output).writeAsBytes(data!.buffer.asUint8List());
+      });
+    }
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('站立'), findsOneWidget);
+    expect(find.text('鸭控 · DuckPilot'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets('phone landscape pages fit without overflow', (tester) async {
     tester.view.physicalSize = const Size(800, 360);
     tester.view.devicePixelRatio = 1;
@@ -17,12 +76,26 @@ void main() {
     await tester
         .pumpWidget(RepaintBoundary(key: root, child: const ConsoleApp()));
     expect(tester.takeException(), isNull);
-    expect(find.text('接管控制'), findsOneWidget);
-    for (final label in ['关节', 'IMU', '遥控']) {
-      await tester.tap(find.byTooltip(label));
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-    }
+    expect(find.text('上电'), findsOneWidget);
+    expect(find.text('站立'), findsOneWidget);
+    expect(find.text('长叫'), findsOneWidget);
+    expect(find.text('短叫'), findsOneWidget);
+    expect(find.byType(Slider), findsNothing);
+    expect(find.byKey(const Key('right-stick')), findsNothing);
+    expect(find.text('接管控制'), findsNothing);
+    final camera =
+        tester.widget<CameraBackdrop>(find.byType(CameraBackdrop)).controller;
+    await tester.tap(find.byTooltip('旋转画面'));
+    await tester.pump();
+    expect(camera.turns, 1);
+    await tester.tap(find.text('中'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('参数'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('IMU200'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
     final output = Platform.environment['PREVIEW_OUTPUT'];
     await tester.tap(find.byTooltip('连接设置'));
     await tester.pumpAndSettle();

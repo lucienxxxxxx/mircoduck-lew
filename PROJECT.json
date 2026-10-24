@@ -1,6 +1,6 @@
 {
   "project": "mircoduck-lew",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "owner": "lucienxxxxxx",
   "service_build": "1fa8438-feetech-control.43-ft01.1",
   "api_version": 40,
@@ -36,20 +36,32 @@
     "upgrade_zip_integrity": true,
     "privacy_scan": true,
     "source_artifact_hardware_tested": false,
-    "python_selected_passed": 20,
-    "flutter_tests_passed": 6,
+    "python_selected_passed": 24,
+    "flutter_tests_passed": 9,
     "flutter_analyze": "no issues",
     "flutter_live_board_test": true,
-    "udp_live_neutral_claim_expiry_test": true
+    "udp_live_neutral_claim_expiry_test": true,
+    "camera_browser_stream_test": true
   },
   "phone": {
     "framework": "Flutter 3.47.7 / Dart 3.13.5",
     "package": "com.lucien.microduck_lew",
-    "version": "0.2.0+2",
+    "version": "0.3.0+3",
     "udp_protocol": 1,
     "port": 20043,
     "robotd_binary_changed": false,
     "android_phone_install_tested": false,
-    "motion_tested": false
+    "motion_tested": false,
+    "name": "鸭控 DuckPilot",
+    "camera": "mediad WebRTC via native Android WebView",
+    "camera_signalling_port": 8443,
+    "power_preparation_hardware_tested": true,
+    "power_preparation_torque_off": true,
+    "camera_browser_test": {
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "loss_in_observed_window": 0
+    }
   }
 }

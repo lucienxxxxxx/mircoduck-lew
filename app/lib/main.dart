@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'phone_home.dart';
+import 'pilot_home.dart';
 import 'services/robot_connection.dart';
+import 'widgets/startup.dart';
 import 'widgets/style.dart';
 
 Future<void> main() async {
@@ -12,15 +13,16 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  runApp(const ConsoleApp());
+  runApp(const ConsoleApp(showStartup: true));
 }
 
 class ConsoleApp extends StatelessWidget {
   final RobotConnection? connection;
-  const ConsoleApp({super.key, this.connection});
+  final bool showStartup;
+  const ConsoleApp({super.key, this.connection, this.showStartup = false});
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'mircoduck-lew',
+        title: '鸭控 · DuckPilot',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.dark,
@@ -41,6 +43,8 @@ class ConsoleApp extends StatelessWidget {
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
           ),
         ),
-        home: PhoneHome(connection: connection),
+        home: showStartup
+            ? StartupGate(child: PhoneHome(connection: connection))
+            : PhoneHome(connection: connection),
       );
 }

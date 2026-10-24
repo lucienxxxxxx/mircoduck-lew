@@ -30,6 +30,15 @@ class RobotConnection extends ChangeNotifier {
   };
   final Set<String> buttons = {};
   bool _disposed = false;
+  int _driveEpoch = 0, _callEpoch = 0;
+  bool _preparingDrive = false;
+  double _wantedX = 0, _wantedY = 0;
+  bool get canStartDrive =>
+      canOperate &&
+      robot.mode == 'motion' &&
+      robot.homed &&
+      robot.torque == true &&
+      robot.sitting != true;
   bool get canOperate =>
       link == LinkState.live && robot.fresh && !robot.realGamepad;
   bool get canDrive =>
@@ -143,6 +152,10 @@ class RobotConnection extends ChangeNotifier {
         if (!robot.fresh || robot.realGamepad) {
           stop();
           acquired = false;
+        } else if (!canStartDrive) {
+          ++_driveEpoch;
+          _wantedX = _wantedY = 0;
+          axes['lx'] = axes['ly'] = axes['rx'] = axes['ry'] = 0;
         }
       }
       if (op == 'joints') robot.jointPacket(m);
@@ -235,7 +248,7 @@ class RobotConnection extends ChangeNotifier {
       changed();
     }
     if (_lastPacket != null && now.difference(_lastPacket!).inSeconds >= 3) {
-      error = 'UDP 连接已断开；需要重新连接和接管';
+      error = 'UDP 连接已断开；请重新连接';
       unawaited(disconnect());
       return;
     }
@@ -260,6 +273,9 @@ class RobotConnection extends ChangeNotifier {
   }
 
   void stop() {
+    ++_driveEpoch;
+    ++_callEpoch;
+    _wantedX = _wantedY = 0;
     _clearAxes();
     if (acquired) {
       _send(
@@ -288,13 +304,126 @@ class RobotConnection extends ChangeNotifier {
   }
 
   Future<void> action(String action) async {
-    if (!canOperate || !acquired) throw StateError('请先连接并接管控制');
+    if (!canOperate || !acquired) throw StateError('控制暂未就绪，请重新操作');
     stop();
     await request('action', fields: {'action': action});
     if (action == 'motion' || action == 'commissioning' || action == 'relax') {
       acquired = false;
     }
     log('请求已接受：$action；以实时状态为准');
+  }
+
+  Future<void> ensureInput() async {
+    if (!canOperate) {
+      throw StateError(robot.realGamepad ? '实体手柄正在使用' : '等待实时反馈');
+    }
+    if (!acquired) await claim();
+  }
+
+  Future<void> powerOn() async {
+    if (robot.mode == 'motion' && robot.fresh) return;
+    robot.modeJob = '';
+    await ensureInput();
+    await action('motion');
+    final deadline = DateTime.now().add(const Duration(seconds: 155));
+    while (DateTime.now().isBefore(deadline)) {
+      if (link != LinkState.live) throw StateError('连接中断，上电结果待确认');
+      if (robot.mode == 'motion' && robot.fresh) return;
+      if (robot.modeJob.startsWith('服务切换失败')) throw StateError(robot.modeJob);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    throw StateError('上电等待超时，请检查主板状态');
+  }
+
+  Future<void> stand() async {
+    if (robot.mode != 'motion') throw StateError('请先上电');
+    if (robot.sitting == true) {
+      await runSkill('sit_toggle');
+      return;
+    }
+    await ensureInput();
+    await action('home');
+  }
+
+  Future<void> enableMovement() async {
+    if (!canStartDrive && robot.sitting != true) {
+      throw StateError('请先站立并等待实时反馈');
+    }
+    await ensureInput();
+    if (!robot.policy) {
+      await request('action', fields: {'action': 'policy-on'});
+      final end = DateTime.now().add(const Duration(seconds: 2));
+      while (!robot.policy && DateTime.now().isBefore(end)) {
+        if (!canOperate) throw StateError('反馈中断');
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+      }
+      if (!robot.policy) throw StateError('运动尚未就绪');
+    }
+  }
+
+  Future<void> runSkill(String name) async {
+    stop();
+    if (!robot.homed) throw StateError('请先站立');
+    await enableMovement();
+    await action(name);
+  }
+
+  void setDrive(double x, double y, double scale) {
+    _wantedX = x * scale;
+    _wantedY = y * scale;
+    if (x == 0 && y == 0) {
+      ++_driveEpoch;
+      axes['lx'] = axes['ly'] = axes['rx'] = axes['ry'] = 0;
+      if (acquired) {
+        _send('frame', fields: {
+          'frame': {'axes': axes, 'buttons': buttons.toList()}
+        });
+      }
+      return;
+    }
+    if (!canStartDrive) return;
+    if (canDrive) {
+      _applyDrive();
+      return;
+    }
+    if (_preparingDrive) return;
+    _preparingDrive = true;
+    final epoch = _driveEpoch;
+    () async {
+      try {
+        await enableMovement();
+        if (epoch == _driveEpoch && canDrive) _applyDrive();
+      } catch (e) {
+        error = '$e';
+        stop();
+        log(error!);
+      } finally {
+        _preparingDrive = false;
+      }
+    }();
+  }
+
+  void _applyDrive() {
+    axes['lx'] = 0;
+    axes['ly'] = _wantedY;
+    axes['rx'] = _wantedX;
+    axes['ry'] = 0;
+  }
+
+  Future<void> shortCall() async {
+    await ensureInput();
+    await request('action', fields: {'action': 'chirp'});
+  }
+
+  Future<void> startLongCall() async {
+    final epoch = ++_callEpoch;
+    await ensureInput();
+    if (epoch == _callEpoch) axisButton('lt', true);
+  }
+
+  void endLongCall() {
+    ++_callEpoch;
+    axisButton('lt', false);
   }
 
   void setStick(bool left, double x, double y, double scale) {

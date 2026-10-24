@@ -20,7 +20,7 @@ spec = importlib.util.spec_from_file_location('console_input', ROOT/'console/rem
 remote = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(remote)
 
-SKILLS = {'walk', 'sitstand', 'ground_pick', 'kick_left', 'kick_right', 'roulade'}
+SKILLS = {'walk', 'sit_toggle', 'ground_pick', 'kick_left', 'kick_right', 'roulade'}
 IDS = [20,21,22,23,24,30,31,32,33,34,10,11,12,13,14]
 ZERO = {'axes': {k: 0 for k in remote.AXES}, 'buttons': []}
 
@@ -36,6 +36,7 @@ class Telemetry:
         self.bus, self.state, self.error = {}, {}, 'Waiting for robotd'
         self.at, self.state_at = 0, 0
         self.skills = []
+        self.policies, self.policy_at = {}, 0
         self.stop = threading.Event()
 
     def start(self):
@@ -49,6 +50,14 @@ class Telemetry:
                 result = robot.request('robot.busStatus')
                 with self.lock:
                     self.bus, self.at, self.error = result, self.clock(), ''
+                if result.get('mode') == 'motion' and self.clock()-self.policy_at > 1:
+                    try:
+                        policies = robot.request('robot.policies')
+                        with self.lock: self.policies, self.policy_at = policies, self.clock()
+                    except Exception:
+                        robot.close()
+                elif result.get('mode') != 'motion':
+                    with self.lock: self.policies = {}
             except Exception as exc:
                 robot.close()
                 with self.lock: self.error = str(exc)[:160]
@@ -80,6 +89,7 @@ class Telemetry:
         now = self.clock()
         with self.lock:
             bus, state, at, state_at, error = self.bus, self.state, self.at, self.state_at, self.error
+            policies, policy_at = self.policies, self.policy_at
         commissioning = bus.get('mode') == 'commissioning'
         sample = bus.get('last_sample') or {}
         diag = bus.get('native') or bus
@@ -103,6 +113,12 @@ class Telemetry:
                   'imu_valid':sensor.get('valid') if commissioning else diag.get('imu_ready'),
                   'imu_seq':sensor.get('sequence') if commissioning else diag.get('imu_sequence'),'error':error[:160],
                   'state_age':rounded((now-state_at)*1000) if state_at else None}
+        status['sitting'] = policies.get('sitting') if now-policy_at < 2 else None
+        available = [name for name in policies.get('skills', []) if name in SKILLS]
+        for slot in policies.get('slots', []):
+            if slot.get('path') and slot.get('slot') in ('sitstand', 'ground_pick'):
+                available.append('sit_toggle' if slot['slot'] == 'sitstand' else 'ground_pick')
+        status['skills'] = sorted(set(available)) if now-policy_at < 2 else []
         rows = sample.get('servos', []) if commissioning else diag.get('joints', [])
         by_id = {r.get('id'):r for r in rows if isinstance(r, dict)}
         targets = state.get('targets') or []
@@ -126,6 +142,7 @@ class Gateway:
         self.job = None
         self.job_lock = threading.Lock()
         self.reply_seq = 0
+        self.reset_ipc = threading.Event()
 
     def close_control(self):
         self.control.release(takeover=bool(self.control.real))
@@ -133,6 +150,9 @@ class Gateway:
             self.session.claimed, self.session.input_at = False, None
 
     def expire(self):
+        if self.reset_ipc.is_set():
+            self.control.robot.close()
+            self.reset_ipc.clear()
         now = self.clock()
         s = self.session
         if s and s.claimed and s.input_at is not None and now-s.input_at > .3:
@@ -179,6 +199,7 @@ class Gateway:
             if message.get('disconnect') is True: self.session = None
             return reply
         if operation == 'claim':
+            if self.job and self.job.is_alive(): raise ValueError('Power preparation is still running')
             result = self.control.command({'action':'state','owner':s.sid,'frame':ZERO})
             s.claimed = result.get('accepted') is True
             s.input_at = now if s.claimed else None
@@ -194,13 +215,15 @@ class Gateway:
                 self.close_control()
                 self.switch_mode(action)
                 result = {'accepted':True,'reason':'Mode request started; observe actual status, then claim again'}
-            elif action in ('home','relax','policy-off'):
-                methods = {'home':('robot.init',{}),'relax':('robot.relax',{}),'policy-off':('robot.enable',{'on':False})}
+            elif action in ('home','relax','policy-off','policy-on','chirp'):
+                methods = {'home':('robot.init',{}),'relax':('robot.relax',{}),
+                           'policy-off':('robot.enable',{'on':False}),
+                           'policy-on':('robot.enable',{'on':True}), 'chirp':('robot.sound',{'tag':'chirp'})}
                 method, params = methods[action]
                 result = self.control.robot.request(method, params)
-                if action != 'home': self.close_control()
-            elif action in SKILLS:
-                result = self.control.robot.request('robot.do',{'skill':action})
+                if action in ('relax','policy-off'): self.close_control()
+            elif action in SKILLS or action == 'sitstand':
+                result = self.control.robot.request('robot.do',{'skill':'sit_toggle' if action == 'sitstand' else action})
             else: raise ValueError('Unsupported action')
         else: raise ValueError('Unsupported operation')
         return self.response({'op':'ack','reply':message['seq'],'accepted':result.get('accepted',True),
@@ -217,6 +240,7 @@ class Gateway:
                 self.job_result = {'success':completed.returncode == 0,
                                    'message':completed.stderr.decode(errors='replace')[-160:]}
             except Exception as exc: self.job_result = {'success':False,'message':str(exc)[:160]}
+            finally: self.reset_ipc.set()
         self.job_result = {'success':None,'message':'running'}
         self.job = threading.Thread(target=run,daemon=True)
         self.job.start()

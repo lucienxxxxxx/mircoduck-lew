@@ -1,7 +1,7 @@
 name: microduck_lew
 description: Android landscape controller for mircoduck-lew using authenticated UDP.
 publish_to: none
-version: 0.2.0+2
+version: 0.3.0+3
 environment:
   sdk: '>=3.4.0 <4.0.0'
 dependencies:
@@ -14,3 +14,9 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 flutter:
   uses-material-design: true
+  assets:
+    - assets/camera.html
+    - assets/camera.js
+    - assets/microduck-wordmark.png
+    - assets/startup-controller.png
+    - assets/duck-head-controller.png

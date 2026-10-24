@@ -19,6 +19,11 @@ SID = '01'*16
 class FakeControl:
     def __init__(self):
         self.real=[]; self.frames=[]; self.releases=0
+        self.robot=self.Robot()
+    class Robot:
+        def __init__(self): self.calls=[]
+        def request(self,method,params): self.calls.append((method,params));return {'accepted':True}
+        def close(self): pass
     def command(self, command):
         self.frames.append(command)
         return {'accepted':not bool(self.real)}
@@ -49,6 +54,28 @@ class DatagramTests(unittest.TestCase):
     def test_handshake_never_sends_actuator_intent(self):
         self.assertEqual(self.control.frames,[])
         self.assertFalse(self.gateway.session.claimed)
+
+    def test_short_call_does_not_enable_or_home_motors(self):
+        self.send('claim');self.send('action',action='chirp')
+        self.assertEqual(self.control.robot.calls,[('robot.sound',{'tag':'chirp'})])
+        self.assertTrue(self.gateway.session.claimed)
+
+    def test_sit_toggle_uses_the_real_robotd_name_and_retains_legacy_alias(self):
+        self.send('claim');self.send('action',action='sit_toggle');self.send('action',action='sitstand')
+        self.assertEqual(self.control.robot.calls,[('robot.do',{'skill':'sit_toggle'})]*2)
+
+    def test_policy_on_is_explicit_and_does_not_implicitly_home(self):
+        self.send('claim');self.send('action',action='policy-on')
+        self.assertEqual(self.control.robot.calls,[('robot.enable',{'on':True})])
+
+    def test_motion_capabilities_and_sitting_come_from_robotd(self):
+        t=Telemetry('/unused',clock=lambda:10)
+        t.error='';t.at=t.state_at=t.policy_at=9.9
+        t.bus={'mode':'motion','fresh_sample':True,'native':{'sample_age_ms':5,'imu_ready':True,'joints':[
+            {'id':20,'position_raw':2050,'feedback_fresh':True,'sample_age_ms':5}]}}
+        t.policies={'sitting':True,'skills':['roulade','not-in-api'],'slots':[{'slot':'sitstand','path':'sit.onnx'}]}
+        packet=t.packets()[0]
+        self.assertTrue(packet['sitting']); self.assertEqual(packet['skills'],['roulade','sit_toggle'])
 
     def test_disconnect_releases_session_and_allows_immediate_new_handshake(self):
         self.send('claim')

@@ -1,5 +1,28 @@
 # Validation record
 
+## DuckPilot / camera 0.3.0 (2026-10-24)
+
+- Fullscreen camera background, floating controls, a single forward/turn joystick,
+  three speed gears, visible short/held calls, and a compact horizontal action panel.
+- Twenty-four Python checks and nine Flutter tests passed. New coverage includes
+  no sideways velocity from the left stick, held-call release, early native video
+  ready events, rotation without reconnecting, 640×320 layout, and startup transition.
+- `flutter analyze` reports no issues; Android ARM64 release builds successfully.
+- The exact bundled video client/HTML was exercised against the actual board in
+  a browser: 1280×720, 30 FPS, approximately 3.4 Mb/s and zero packet loss in the
+  observed window. DOM/video checks confirmed 90° display rotation. The scene
+  itself was very dark. This does not establish camera exposure or focus quality.
+- The real Flutter client exercised power preparation: actual motion mode, fresh
+  IMU and all 15 joints, torque OFF, no HOME and no enabled policy. It did not
+  request standing, sound, skill playback or nonzero movement on the hardware.
+- No Android handset was attached to ADB. Native WebView behavior on the user's
+  actual phone and physical movement/audio still require acceptance there.
+- The user selected the controller wordmark image for the named DuckPilot startup
+  page and approved the separate duck-head/controller launcher artwork.
+- The installed robotd binary remains unchanged; updated UDP operations use the
+  existing IPC. `sit_toggle` is the actual daemon skill name, correcting the
+  previous generic sitstand spelling while retaining a compatibility alias.
+
 ## Phone / UDP 0.2.0 (2026-10-24)
 
 - Flutter 3.47.7, Dart 3.13.5, JDK17, Android build tools 36.0.0; ARM64 APK,

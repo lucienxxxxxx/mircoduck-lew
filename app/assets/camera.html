@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c10;touch-action:none}
+video{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;height:100%;object-fit:cover;background:#070c10}
+.edge{position:fixed;top:0;bottom:0;width:29%;pointer-events:none;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.left{left:0;background:linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.50),transparent);mask-image:linear-gradient(90deg,#000 55%,transparent)}
+.right{right:0;background:linear-gradient(270deg,rgba(0,0,0,.82),rgba(0,0,0,.50),transparent);mask-image:linear-gradient(270deg,#000 55%,transparent)}
+</style></head><body><video id="camera" autoplay playsinline muted></video><div class="edge left"></div><div class="edge right"></div>
+<script>
+/*CAMERA_SCRIPT*/
+const video=document.querySelector('video');
+const emit=payload=>{if(window.MicroduckVideo)MicroduckVideo.postMessage(JSON.stringify(payload));};
+const camera=new Camera(video,(state,message)=>emit({type:'state',state,message}),stats=>emit({type:'stats',...stats}));
+let rotation=0;
+window.rotateView=value=>{rotation=((Number(value)%4)+4)%4;const odd=rotation%2;video.style.width=(odd?innerHeight:innerWidth)+'px';video.style.height=(odd?innerWidth:innerHeight)+'px';video.style.transform=`translate(-50%,-50%) rotate(${rotation*90}deg)`;};
+window.addEventListener('resize',()=>rotateView(rotation));
+window.connectCamera=(host,port)=>{try{camera.connect(host,Number(port));}catch(e){emit({type:'state',state:'error',message:String(e.message)});}};
+window.disconnectCamera=()=>camera.disconnect();
+window.addEventListener('pagehide',()=>camera.disconnect());
+window.addEventListener('contextmenu',e=>e.preventDefault());
+rotateView(0);emit({type:'ready'});
+</script></body></html>

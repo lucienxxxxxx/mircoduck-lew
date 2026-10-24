@@ -15,8 +15,15 @@ void main() {
       await client.connect(host!, 20043, key);
       await Future<void>.delayed(const Duration(milliseconds: 1100));
       expect(client.link, LinkState.live);
-      expect(client.robot.mode, 'commissioning');
-      expect(client.robot.torque, 'off');
+      if (Platform.environment['MICRODUCK_TEST_POWER'] == '1') {
+        await client.powerOn();
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        expect(client.robot.mode, 'motion');
+        expect(client.robot.torque, false);
+      } else {
+        expect(['commissioning', 'motion'], contains(client.robot.mode));
+        expect(['off', false], contains(client.robot.torque));
+      }
       expect(client.robot.fresh, true);
       expect(client.robot.imuValid, true);
       expect(client.robot.joints.length, 15);
@@ -33,5 +40,6 @@ void main() {
   },
       skip: host == null
           ? 'Set explicit test host and a local pairing-key file'
-          : false);
+          : false,
+      timeout: const Timeout(Duration(seconds: 180)));
 }

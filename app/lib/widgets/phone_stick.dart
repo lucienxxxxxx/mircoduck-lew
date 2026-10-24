@@ -5,7 +5,12 @@ import 'style.dart';
 class PhoneStick extends StatefulWidget {
   final bool enabled;
   final ValueChanged<Offset> onChanged;
-  const PhoneStick({super.key, required this.enabled, required this.onChanged});
+  final String label;
+  const PhoneStick(
+      {super.key,
+      required this.enabled,
+      required this.onChanged,
+      this.label = '方向摇杆'});
   @override
   State<PhoneStick> createState() => _PhoneStickState();
 }
@@ -44,8 +49,7 @@ class _PhoneStickState extends State<PhoneStick> {
         builder: (context, box) {
           final size = box.maxWidth;
           return Semantics(
-            label:
-                widget.key == const Key('left-stick') ? '前后与横移摇杆' : '转向与头部摇杆',
+            label: widget.label,
             enabled: widget.enabled,
             child: Listener(
               behavior: HitTestBehavior.opaque,

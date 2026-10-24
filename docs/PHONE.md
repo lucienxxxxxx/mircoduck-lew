@@ -1,4 +1,6 @@
-# Android 手机控制
+# Android 手机控制（0.2 历史记录）
+
+当前 0.3 版本已改为鸭控 DuckPilot 全屏相机界面，使用说明见 [DUCKPILOT.md](DUCKPILOT.md)。以下保留 0.2 的双摇杆操作记录。
 
 App 0.2.0 从此前为本用户开发的 Flutter 横屏机器人控制台延续，已替换原先的 27 关节 ROS/rosbridge 接入，匹配当前 15 关节 Microduck。App 包名 `com.lucien.microduck_lew`。当前 APK 是个人测试签名，尚未在真实 Android 手机安装验收；后续正式分发应配置自己的发布签名并保持签名连续。
 

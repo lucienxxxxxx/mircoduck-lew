@@ -55,6 +55,8 @@ class RobotState {
   DateTime? jointsAt;
   List<double>? gyro;
   bool? imuValid;
+  bool? sitting;
+  List<String> skills = [];
   int? imuSequence;
   String modeJob = '';
   final Map<int, DateTime> jointReceived = {};
@@ -87,6 +89,8 @@ class RobotState {
     torque = d['torque'];
     imuValid = d['imu_valid'] as bool?;
     imuSequence = (d['imu_seq'] as num?)?.toInt();
+    sitting = d['sitting'] as bool?;
+    skills = (d['skills'] as List? ?? []).whereType<String>().toList();
     final job = d['mode_job'];
     modeJob = job is Map
         ? (job['success'] == null
