@@ -1,0 +1,3 @@
+BUILD = '1fa8438-feetech-control.43-ft01.1'
+CONSOLE_VERSION = '1.0.167'
+OFFICIAL_VERSION = '0.15.1'

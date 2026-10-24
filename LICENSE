@@ -1,0 +1,21 @@
+mircoduck-lew — License scope
+
+This repository contains material under multiple licenses.
+
+1. firmware/ Rust runtime source retains Apache License 2.0, as stated in
+   firmware/LICENSE and its Cargo manifests. Existing copyright notices remain.
+2. Original console Python/JavaScript/CSS and launch tools derived from kissqy
+   retain the upstream Personal Non-Commercial license. See console/LICENSE,
+   LICENSES/Personal-NonCommercial.txt and LICENSES/UPSTREAM-SCOPE.txt.
+3. console/static/vendor, model geometry, test/model assets and other third-party
+   material retain their own licenses. See NOTICE.md and console/licenses/.
+4. Independently authored additions in top-level scripts/, tests/ and docs/ are
+   provided under Apache License 2.0 unless a file identifies another origin.
+   Copyright 2026 mircoduck-lew contributors. Derived code retains its upstream
+   terms; this statement does not grant rights in another author's material.
+
+This repository as a whole is source-available with mixed licensing. The
+non-commercial components are not OSI-open-source. Do not remove or replace
+their restrictions with this project's Apache license.
+
+Full Apache text: LICENSES/Apache-2.0.txt.

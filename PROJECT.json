@@ -1,0 +1,40 @@
+{
+  "project": "mircoduck-lew",
+  "version": "0.1.0",
+  "owner": "lucienxxxxxx",
+  "service_build": "1fa8438-feetech-control.43-ft01.1",
+  "api_version": 40,
+  "upstream_repository": "https://github.com/kissqy/Microduck-kissqy",
+  "upstream_snapshot": "f02e875e73b88bf8ec7d5bbb34d0b461ac83b010",
+  "official_runtime_revision": "1fa84386f07884e27866411bc1ba166977bced95",
+  "imu_protocol": "IMU-to-Feetech v0.1; also retains FT6",
+  "baseline_tests": {
+    "protocol_passed": 40,
+    "robotd_passed": 11,
+    "robotd_failed": 9,
+    "same_failures_on_unmodified_upstream": true
+  },
+  "hardware_validation": {
+    "mode": "commissioning",
+    "approx_hz": 50,
+    "consecutive_successful_cycles": 1994,
+    "communication_failures_in_observed_window": 0,
+    "servos": 15,
+    "imu_ready": true,
+    "motion_tested": false
+  },
+  "privacy": "No credentials, local connection history, actual joint zeros, actual IMU mounting, or raw hardware logs are included.",
+  "source_checks": {
+    "date": "2026-10-24",
+    "console_python_passed": 6,
+    "console_javascript_passed": 6,
+    "feetech_passed": 40,
+    "feetech_failed": 0,
+    "arm64_release_build": true,
+    "qemu_help": true,
+    "qemu_deployment_info": true,
+    "upgrade_zip_integrity": true,
+    "privacy_scan": true,
+    "source_artifact_hardware_tested": false
+  }
+}
