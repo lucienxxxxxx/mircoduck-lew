@@ -135,8 +135,8 @@ class Telemetry:
 
 
 class Gateway:
-    def __init__(self, key, control, telemetry, clock=time.monotonic):
-        self.key, self.control, self.telemetry, self.clock = key, control, telemetry, clock
+    def __init__(self, control, telemetry, clock=time.monotonic):
+        self.control, self.telemetry, self.clock = control, telemetry, clock
         self.session = None
         self.used_sids = set()
         self.job = None
@@ -166,11 +166,11 @@ class Gateway:
         s = self.session
         if s is None: return None
         self.reply_seq += 1
-        return encode(self.key, {'v':1,'sid':s.sid,'seq':self.reply_seq,
+        return encode( {'v':2,'sid':s.sid,'seq':self.reply_seq,
                                  'ticket':s.ticket, **payload})
 
     def request(self, wire, address):
-        message = decode(self.key, wire)
+        message = decode(wire)
         now = self.clock()
         self.expire()
         if message.get('op') == 'hello':
@@ -250,14 +250,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bind', default='0.0.0.0')
     parser.add_argument('--port', type=int, default=20043)
-    parser.add_argument('--key-file', type=Path, required=True)
     parser.add_argument('--socket', default='/run/robotd.sock')
     args = parser.parse_args()
-    key = bytes.fromhex(args.key_file.read_text().strip())
-    if len(key) != 32: raise ValueError('Pairing key must contain 32 random bytes')
     telemetry = Telemetry(args.socket)
     control = remote.Input(remote.Robot(args.socket))
-    gateway = Gateway(key, control, telemetry)
+    gateway = Gateway(control, telemetry)
     peer = remote.monitor()
     control.hotplug(remote.devices())
     def drain():
@@ -291,9 +288,9 @@ def main():
                             if reply: udp.sendto(reply,address)
                         except (ValueError,OSError,KeyError,TypeError) as exc:
                             s = gateway.session
-                            # Bad authentication and unknown endpoints receive no reflection.
+                            # Malformed packets and unknown endpoints receive no error reflection.
                             try:
-                                verified = decode(key,wire)
+                                verified = decode(wire)
                                 if s and address == s.address and verified.get('sid') == s.sid:
                                     udp.sendto(gateway.response({'op':'error','reply':verified.get('seq'),'reason':str(exc)[:160],'claimed':s.claimed}),address)
                             except (ValueError,TypeError,KeyError): pass

@@ -5,20 +5,19 @@ import 'package:microduck_lew/models/robot.dart';
 import 'package:microduck_lew/services/wire.dart';
 
 void main() {
-  test('Dart packets match the Python HMAC golden vector', () {
+  test('Dart packets match the Python keyless JSON golden vector', () {
     final fixture = jsonDecode(File('test/wire-golden.json').readAsStringSync())
         as Map<String, dynamic>;
-    final key = pairingKey(fixture['key']);
     final message = Map<String, dynamic>.from(fixture['message']);
-    expect(utf8.decode(encodePacket(key, message)), fixture['wire']);
-    expect(decodePacket(key, utf8.encode(fixture['wire'])), message);
-    expect(() => decodePacket(List.filled(32, 0), utf8.encode(fixture['wire'])),
-        throwsFormatException);
+    expect(utf8.decode(encodePacket(message)), fixture['wire']);
+    expect(decodePacket(utf8.encode(fixture['wire'])), message);
+    expect(() => decodePacket(utf8.encode('{"v":1}')), throwsFormatException);
   });
-  test('invalid pairing keys and oversized messages are rejected', () {
-    expect(() => pairingKey('robot-password'), throwsFormatException);
-    expect(() => encodePacket(List.filled(32, 0), {'v': 1, 'p': 'x' * 2000}),
+  test('old envelopes and oversized messages are rejected', () {
+    expect(() => decodePacket(utf8.encode('{"p":"old","h":"mac"}')),
         throwsFormatException);
+    expect(
+        () => encodePacket({'v': 2, 'p': 'x' * 2000}), throwsFormatException);
   });
   test('missing telemetry stays unknown and old status loses authorization',
       () {

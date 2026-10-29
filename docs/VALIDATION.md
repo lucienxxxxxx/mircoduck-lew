@@ -1,5 +1,17 @@
 # Validation record
 
+## DuckPilot / duckctl 0.4.0 (2026-10-29)
+
+- Keyless UDP v2 replaces signed v1; matching App and gateway required.
+- 32 Linux Python tests and 10 Flutter tests pass; analyze reports no issues.
+- ARM64 release APK, package version 0.4.0+4 and signature verified.
+- Real Flutter client connects without a key, reads fresh IMU/all 15 joints and reconnects. No motor action is requested.
+- Installed on the user-confirmed reflashed board. Existing robotd build `1fa8438-feetech-ft6-control.43-md12.2` remains unchanged; its active IMU protocol is microduck-v1.2. Original torque ON and policy OFF are retained.
+- duckctl help/version, profiles, real IMU gyro/quaternion/gravity and service status verified on board. UDP and mediad are active.
+- NetworkManager accepts generated STA/AP profiles with autoconnect disabled; test profiles are then deleted. Active Wi-Fi UUID remains unchanged.
+- No actual STA/AP radio switch, Android handset install or physical movement/audio acceptance was performed. Independent systemd switch/rollback workers and confirmation logic have unit coverage; a real network-switch acceptance remains outstanding.
+- Original private flash image has not been rebuilt for 0.4; install the current UDP/CLI update after restoring it.
+
 ## DuckPilot / camera 0.3.0 (2026-10-24)
 
 - Fullscreen camera background, floating controls, a single forward/turn joystick,

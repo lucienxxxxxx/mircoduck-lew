@@ -1,37 +1,24 @@
-"""Authenticated UDP messages. HMAC covers the exact UTF-8 payload bytes."""
-import hashlib
-import hmac
+"""Keyless LAN UDP v2 messages; session tickets still bound input lifetime."""
 import json
 
 MAX_PACKET = 1400
 
 
-def encode(key, payload):
-    body = json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
-    signature = hmac.new(key, body.encode(), hashlib.sha256).hexdigest()
-    wire = json.dumps({'p': body, 'h': signature}, ensure_ascii=False, separators=(',', ':')).encode()
+def encode(payload):
+    wire = json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode()
     if len(wire) > MAX_PACKET:
         raise ValueError('Datagram too large')
     return wire
 
 
-def decode(key, wire):
+def decode(wire):
     if len(wire) > MAX_PACKET:
         raise ValueError('Datagram too large')
-    envelope = json.loads(wire)
-    if not isinstance(envelope, dict) or set(envelope) != {'p', 'h'}:
-        raise ValueError('Invalid envelope')
-    body, signature = envelope['p'], envelope['h']
-    if not isinstance(body, str) or not isinstance(signature, str):
-        raise ValueError('Invalid envelope values')
-    expected = hmac.new(key, body.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(signature, expected):
-        raise ValueError('Authentication failed')
     def invalid(value):
         raise ValueError('Nonfinite JSON value')
-    result = json.loads(body, parse_constant=invalid)
-    if not isinstance(result, dict) or result.get('v') != 1:
-        raise ValueError('Unsupported protocol')
+    result = json.loads(wire, parse_constant=invalid)
+    if not isinstance(result, dict) or type(result.get('v')) is not int or result['v'] != 2:
+        raise ValueError('Unsupported protocol; use DuckPilot 0.4 or newer')
     return result
 
 

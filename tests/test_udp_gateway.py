@@ -11,7 +11,6 @@ sys.path.insert(0,str(ROOT/'gateway'))
 from protocol import decode, encode
 from server import Gateway, Telemetry, remote, ZERO
 
-KEY = bytes(range(32))
 ADDRESS = ('127.0.0.1',30000)
 SID = '01'*16
 
@@ -35,21 +34,21 @@ class DatagramTests(unittest.TestCase):
     def setUp(self):
         self.now=10.0
         self.control=FakeControl()
-        self.gateway=Gateway(KEY,self.control,None,clock=lambda:self.now)
-        response=self.gateway.request(encode(KEY,{'v':1,'op':'hello','sid':SID,'seq':1}),ADDRESS)
-        self.ticket=decode(KEY,response)['ticket']
+        self.gateway=Gateway(self.control,None,clock=lambda:self.now)
+        response=self.gateway.request(encode({'v':2,'op':'hello','sid':SID,'seq':1}),ADDRESS)
+        self.ticket=decode(response)['ticket']
         self.seq=1
 
     def send(self,op,**fields):
         self.seq+=1
-        return self.gateway.request(encode(KEY,{'v':1,'sid':SID,'ticket':self.ticket,'seq':self.seq,'op':op,**fields}),ADDRESS)
+        return self.gateway.request(encode({'v':2,'sid':SID,'ticket':self.ticket,'seq':self.seq,'op':op,**fields}),ADDRESS)
 
-    def test_authenticated_unicode_roundtrip_and_tamper_rejection(self):
-        message={'v':1,'op':'error','reason':'实体手柄已接管'}
-        wire=encode(KEY,message)
-        self.assertEqual(decode(KEY,wire),message)
-        envelope=json.loads(wire); envelope['p']+=' '
-        with self.assertRaises(ValueError): decode(KEY,json.dumps(envelope).encode())
+    def test_keyless_unicode_roundtrip_and_old_envelope_rejection(self):
+        message={'v':2,'op':'error','reason':'实体手柄已接管'}
+        wire=encode(message)
+        self.assertEqual(decode(wire),message)
+        self.assertEqual(json.loads(wire),message)
+        with self.assertRaises(ValueError): decode(b'{"p":"old-format","h":"obsolete"}')
 
     def test_handshake_never_sends_actuator_intent(self):
         self.assertEqual(self.control.frames,[])
@@ -59,6 +58,13 @@ class DatagramTests(unittest.TestCase):
         self.send('claim');self.send('action',action='chirp')
         self.assertEqual(self.control.robot.calls,[('robot.sound',{'tag':'chirp'})])
         self.assertTrue(self.gateway.session.claimed)
+
+    def test_relax_only_releases_torque_and_input_without_switching_services(self):
+        self.send('claim');self.send('action',action='relax')
+        self.assertEqual(self.control.robot.calls,[('robot.relax',{})])
+        self.assertFalse(self.gateway.session.claimed)
+        self.assertIsNone(self.gateway.job)
+        self.assertGreater(self.control.releases,0)
 
     def test_sit_toggle_uses_the_real_robotd_name_and_retains_legacy_alias(self):
         self.send('claim');self.send('action',action='sit_toggle');self.send('action',action='sitstand')
@@ -79,22 +85,22 @@ class DatagramTests(unittest.TestCase):
 
     def test_disconnect_releases_session_and_allows_immediate_new_handshake(self):
         self.send('claim')
-        self.assertTrue(decode(KEY,self.send('release',disconnect=True))['accepted'])
+        self.assertTrue(decode(self.send('release',disconnect=True))['accepted'])
         self.assertIsNone(self.gateway.session)
-        result=self.gateway.request(encode(KEY,{'v':1,'op':'hello','sid':'02'*16,'seq':1}),ADDRESS)
-        self.assertEqual(decode(KEY,result)['op'],'hello')
+        result=self.gateway.request(encode({'v':2,'op':'hello','sid':'02'*16,'seq':1}),ADDRESS)
+        self.assertEqual(decode(result)['op'],'hello')
         self.assertFalse(self.gateway.session.claimed)
 
     def test_replayed_handshake_and_frame_are_rejected(self):
         with self.assertRaises(ValueError):
-            self.gateway.request(encode(KEY,{'v':1,'sid':SID,'seq':1,'op':'hello'}),ADDRESS)
-        wire=encode(KEY,{'v':1,'sid':SID,'seq':2,'ticket':self.ticket,'op':'claim'})
+            self.gateway.request(encode({'v':2,'sid':SID,'seq':1,'op':'hello'}),ADDRESS)
+        wire=encode({'v':2,'sid':SID,'seq':2,'ticket':self.ticket,'op':'claim'})
         self.gateway.request(wire,ADDRESS)
         with self.assertRaises(ValueError): self.gateway.request(wire,ADDRESS)
         self.assertEqual(len(self.control.frames),1)
 
     def test_wrong_endpoint_does_not_steal_claim(self):
-        wire=encode(KEY,{'v':1,'sid':SID,'seq':2,'ticket':self.ticket,'op':'claim'})
+        wire=encode({'v':2,'sid':SID,'seq':2,'ticket':self.ticket,'op':'claim'})
         with self.assertRaises(ValueError): self.gateway.request(wire,('127.0.0.2',30000))
         self.assertEqual(self.control.frames,[])
 
@@ -115,13 +121,13 @@ class DatagramTests(unittest.TestCase):
     def test_ticket_rotation_allows_delivery_race_but_never_extends_original_lifetime(self):
         self.now+=.36
         self.gateway.session.rotate('next-ticket',self.now)
-        self.assertTrue(decode(KEY,self.send('claim'))['accepted'])
+        self.assertTrue(decode(self.send('claim'))['accepted'])
         self.now+=.10
         with self.assertRaises(ValueError): self.send('frame',frame=ZERO)
 
     def test_real_gamepad_refuses_phone_claim(self):
         self.control.real=[{'name':'Physical Xbox'}]
-        result=decode(KEY,self.send('claim'))
+        result=decode(self.send('claim'))
         self.assertFalse(result['accepted'])
         self.assertFalse(self.gateway.session.claimed)
 
@@ -130,9 +136,10 @@ class DatagramTests(unittest.TestCase):
         self.send('claim')
         with self.assertRaises(ValueError): self.send('action',action='write-register')
 
-    def test_unknown_key_and_oversize_are_rejected(self):
-        with self.assertRaises(ValueError): decode(bytes(32),encode(KEY,{'v':1}))
-        with self.assertRaises(ValueError): decode(KEY,b' '*1401)
+    def test_wrong_version_nonfinite_and_oversize_are_rejected(self):
+        for invalid in [b'{"v":1}', b'{"v":2,"x":NaN}', b'[]', b'{']:
+            with self.assertRaises(ValueError): decode(invalid)
+        with self.assertRaises(ValueError): decode(b' '*1401)
 
     def test_telemetry_uses_native_names_and_stale_samples_stay_stale(self):
         t=Telemetry('/unused',clock=lambda:10.0)
@@ -145,7 +152,7 @@ class DatagramTests(unittest.TestCase):
         self.assertEqual(packets[0]['imu_seq'],4)
         self.assertEqual(packets[1]['rows'][0][2],2050)
         for packet in packets:
-            self.assertLessEqual(len(encode(KEY,{'v':1,'sid':SID,'seq':1,'ticket':self.ticket,**packet})),1400)
+            self.assertLessEqual(len(encode({'v':2,'sid':SID,'seq':1,'ticket':self.ticket,**packet})),1400)
 
 
 @unittest.skipUnless(os.name=='posix', 'Linux kernel ownership locks')

@@ -1,6 +1,6 @@
 {
   "project": "mircoduck-lew",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "owner": "lucienxxxxxx",
   "service_build": "1fa8438-feetech-control.43-ft01.1",
   "api_version": 40,
@@ -25,7 +25,7 @@
   },
   "privacy": "No credentials, local connection history, actual joint zeros, actual IMU mounting, or raw hardware logs are included.",
   "source_checks": {
-    "date": "2026-10-24",
+    "date": "2026-10-29",
     "console_python_passed": 6,
     "console_javascript_passed": 6,
     "feetech_passed": 40,
@@ -36,8 +36,8 @@
     "upgrade_zip_integrity": true,
     "privacy_scan": true,
     "source_artifact_hardware_tested": false,
-    "python_selected_passed": 24,
-    "flutter_tests_passed": 9,
+    "python_selected_passed": 32,
+    "flutter_tests_passed": 10,
     "flutter_analyze": "no issues",
     "flutter_live_board_test": true,
     "udp_live_neutral_claim_expiry_test": true,
@@ -46,8 +46,8 @@
   "phone": {
     "framework": "Flutter 3.47.7 / Dart 3.13.5",
     "package": "com.lucien.microduck_lew",
-    "version": "0.3.0+3",
-    "udp_protocol": 1,
+    "version": "0.4.0+4",
+    "udp_protocol": 2,
     "port": 20043,
     "robotd_binary_changed": false,
     "android_phone_install_tested": false,
@@ -62,6 +62,13 @@
       "height": 720,
       "fps": 30,
       "loss_in_observed_window": 0
-    }
+    },
+    "pairing_required": false
+  },
+  "cli": {
+    "version": "0.4.0",
+    "wifi_backend": "NetworkManager",
+    "sta_ap_hardware_switch_tested": false,
+    "profile_load_on_actual_networkmanager_tested": true
   }
 }

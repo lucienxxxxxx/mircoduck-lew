@@ -4,7 +4,7 @@
 
 由 [lucienxxxxxx](https://github.com/lucienxxxxxx) 维护，基于 [kissqy/Microduck-kissqy](https://github.com/kissqy/Microduck-kissqy) 和 [Pollen Robotics Microduck](https://github.com/pollen-robotics/microduck) 整理。保留上游署名、版权头及分项许可；本项目不是官方发布。
 
-**当前版本：0.3.0；手机 App：鸭控 DuckPilot；robotd 构建：`1fa8438-feetech-control.43-ft01.1`，IPC API40；手机 UDP 协议 v1。**
+**当前版本：0.4.0；手机 App：鸭控 DuckPilot；robotd 构建：`1fa8438-feetech-control.43-ft01.1`，IPC API40；手机 UDP 协议 v2。**
 
 ## 这个版本做了什么
 
@@ -16,9 +16,9 @@
 - 控制台同时识别原生 FT6 和 v0.1 适配服务；保留实时反馈、标定模式、扭矩 OFF 等操作条件。
 - 安装默认保持 commissioning；不在启动时自动站立或行走。
 - Android 横屏全屏相机，悬浮控制与左右渐变模糊蒙板；画面支持四向旋转。
-- 左摇杆控制前后与左右转向，慢/中/快三档；右侧直接提供上电、站立、长叫、短叫与停止，底部动作面板可横向滚动。
+- 左摇杆控制前后与左右转向，慢/中/快三档；右侧直接提供上电、卸力、站立、长叫、短叫与停止，底部动作面板可横向滚动。
 - 读取真实的 15 关节、IMU、坐姿状态和已加载动作；过期或未提供的数据不补零。
-- UDP 使用每台机器独立的 HMAC 配对密钥、会话序号和短期票据；300 ms 无输入释放，实体手柄优先，手机与更新后的控制台共享控制权锁。
+- UDP 为无密钥局域网直连，保留会话序号和短期票据；300 ms 无输入释放，实体手柄优先，手机与更新后的控制台共享控制权锁。
 - UDP 通过现有官方 IPC 请求 robotd；本次手机接入没有修改或重新替换 robotd 二进制。
 
 ## 目录
@@ -27,6 +27,7 @@
 console/                  当前 Python + 网页控制台
 app/                      Flutter Android 手机客户端
 gateway/                  主板 Python 标准库 UDP 适配服务
+cli/                      duckctl 统一终端控制、STA/AP 切换
 firmware/                 robotd 及其 Rust 依赖源码、数学测试夹具
 config/                   未标定的通用配置示例
 scripts/                  构建、资源准备、测试和发布整理工具
@@ -38,7 +39,9 @@ PROJECT.json              版本与来源记录
 
 ## 手机控制
 
-主板安装接入层：`sudo bash scripts/install-udp.sh`。手机与主板接入同一局域网，填写自己的主板地址、UDP 端口 `20043` 和安装时生成的配对密钥。相机使用现有 mediad WebRTC 信令端口 `8443`。操作顺序为“连接 → 上电 → 站立”；控制权租期在内部处理。
+主板安装接入层：`sudo bash scripts/install-udp.sh`。手机与主板接入同一局域网，填写自己的主板地址、UDP 端口 `20043`，无需密钥。相机使用现有 mediad WebRTC 信令端口 `8443`。操作顺序为“连接 → 上电 → 站立”；控制权租期在内部处理。
+
+主板统一命令及 STA/AP 切换见 [duckctl 文档](docs/CLI.md)。卸力释放舵机扭矩，主板继续运行。
 
 安装、编译和操作说明见 [DuckPilot 使用说明](docs/DUCKPILOT.md)，报文及超时约定见 [UDP 协议](docs/UDP.md)。个人系统恢复镜像含实际标定和凭据，不属于公开源码发布内容。
 

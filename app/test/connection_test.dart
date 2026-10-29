@@ -6,9 +6,8 @@ import 'package:microduck_lew/services/wire.dart';
 
 void main() {
   test(
-      'real UDP socket authenticates, claims explicitly, and clears stale input',
+      'real UDP socket connects without a key, claims explicitly, and clears stale input',
       () async {
-    final key = List<int>.generate(32, (i) => i);
     final server =
         await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     final client = RobotConnection();
@@ -21,8 +20,8 @@ void main() {
       final to = endpoint;
       if (to == null) return;
       server.send(
-          encodePacket(key, {
-            'v': 1,
+          encodePacket({
+            'v': 2,
             'sid': sid,
             'seq': ++sequence,
             'ticket': 'test-ticket',
@@ -36,7 +35,7 @@ void main() {
       if (event != RawSocketEvent.read) return;
       Datagram? d;
       while ((d = server.receive()) != null) {
-        final m = decodePacket(key, d!.data);
+        final m = decodePacket(d!.data);
         endpoint = d;
         sid = m['sid'];
         switch (m['op']) {
@@ -80,8 +79,7 @@ void main() {
       }
     });
     try {
-      await client.connect('127.0.0.1', server.port,
-          key.map((v) => v.toRadixString(16).padLeft(2, '0')).join());
+      await client.connect('127.0.0.1', server.port);
       await Future<void>.delayed(const Duration(milliseconds: 120));
       expect(client.canOperate, true);
       expect(client.acquired, false);

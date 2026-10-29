@@ -7,8 +7,40 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:microduck_lew/main.dart';
 import 'package:microduck_lew/widgets/phone_stick.dart';
 import 'package:microduck_lew/widgets/camera_backdrop.dart';
+import 'package:microduck_lew/services/robot_connection.dart';
+
+class RelaxConnection extends RobotConnection {
+  final actions = <String>[];
+  @override
+  Future<void> ensureInput() async {}
+  @override
+  Future<void> action(String action) async {
+    actions.add(action);
+  }
+}
 
 void main() {
+  testWidgets('unload button confirms and sends only relax', (tester) async {
+    tester.view.physicalSize = const Size(800, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final connection = RelaxConnection()..link = LinkState.live;
+    connection.robot.status(
+        {'fresh': true, 'mode': 'motion', 'torque': true, 'homed': true});
+    await tester.pumpWidget(ConsoleApp(connection: connection));
+    expect(find.text('卸力'), findsOneWidget);
+    expect(find.text('下电'), findsNothing);
+    await tester.tap(find.text('卸力'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('主板继续运行'), findsOneWidget);
+    expect(connection.actions, isEmpty);
+    await tester.tap(find.text('确认卸力'));
+    await tester.pumpAndSettle();
+    expect(connection.actions, ['relax']);
+    await tester.pumpWidget(const SizedBox());
+    connection.dispose();
+  });
   testWidgets(
       'small phone keeps a clear center and a compact scrollable action panel',
       (tester) async {
@@ -99,6 +131,8 @@ void main() {
     final output = Platform.environment['PREVIEW_OUTPUT'];
     await tester.tap(find.byTooltip('连接设置'));
     await tester.pumpAndSettle();
+    expect(find.text('配对密钥'), findsNothing);
+    expect(find.textContaining('局域网直连'), findsOneWidget);
     tester.view.viewInsets = const FakeViewPadding(bottom: 180);
     await tester.pump();
     expect(tester.takeException(), isNull);

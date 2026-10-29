@@ -9,7 +9,7 @@ This repository contains material under multiple licenses.
    LICENSES/Personal-NonCommercial.txt and LICENSES/UPSTREAM-SCOPE.txt.
 3. console/static/vendor, model geometry, test/model assets and other third-party
    material retain their own licenses. See NOTICE.md and console/licenses/.
-4. Independently authored additions in app/, gateway/, scripts/, tests/ and docs/ are
+4. Independently authored additions in app/, gateway/, cli/, scripts/, tests/ and docs/ are
    provided under Apache License 2.0 unless a file identifies another origin.
    Copyright 2026 mircoduck-lew contributors. Derived code retains its upstream
    terms; this statement does not grant rights in another author's material.

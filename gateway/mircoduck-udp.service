@@ -1,11 +1,11 @@
 [Unit]
-Description=mircoduck-lew authenticated phone UDP adapter
+Description=mircoduck-lew keyless LAN phone UDP adapter
 After=network-online.target robotd.service
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 -B /opt/mircoduck-lew/gateway/server.py --key-file /etc/mircoduck-lew/udp.key --port 20043
+ExecStart=/usr/bin/python3 -B /opt/mircoduck-lew/gateway/server.py --port 20043
 Restart=on-failure
 RestartSec=2
 KillSignal=SIGINT

@@ -23,7 +23,6 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
   final host = TextEditingController(text: 'microduck.local');
   final port = TextEditingController(text: '20043');
   final cameraPort = TextEditingController(text: '8443');
-  final key = TextEditingController();
   int gear = 0;
   bool busy = false;
   double get speed => [.35, .65, 1.0][gear];
@@ -64,7 +63,6 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
     host.dispose();
     port.dispose();
     cameraPort.dispose();
-    key.dispose();
     super.dispose();
   }
 
@@ -100,7 +98,7 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
     if (videoPort < 1 || videoPort > 65535) {
       throw const FormatException('相机端口无效');
     }
-    await c.connect(host.text.trim(), int.tryParse(port.text) ?? 0, key.text);
+    await c.connect(host.text.trim(), int.tryParse(port.text) ?? 0);
     connectCamera();
     if (mounted) Navigator.pop(context);
   }
@@ -111,15 +109,15 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
       final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-                  title: const Text('下电'),
-                  content: const Text('关节将卸力，请先放稳或支撑好机器人。'),
+                  title: const Text('卸力'),
+                  content: const Text('释放舵机扭矩，主板继续运行。请先放稳或支撑好机器人。'),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
                         child: const Text('取消')),
                     FilledButton(
                         onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('确认下电'))
+                        child: const Text('确认卸力'))
                   ]));
       if (confirmed == true) {
         await c.ensureInput();
@@ -327,7 +325,7 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
               child: keyButton(
                   Icons.power_settings_new,
                   c.robot.torque == true
-                      ? '下电'
+                      ? '卸力'
                       : c.robot.mode == 'motion'
                           ? '已就绪'
                           : '上电',
@@ -539,13 +537,6 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
                   decoration: const InputDecoration(labelText: '相机端口')))
         ]),
         const SizedBox(height: 12),
-        TextField(
-            controller: key,
-            obscureText: true,
-            enableSuggestions: false,
-            autocorrect: false,
-            decoration: const InputDecoration(labelText: '配对密钥')),
-        const SizedBox(height: 12),
         FilledButton(
             onPressed: busy ? null : () => perform(connect),
             child: Text(busy ? '连接中…' : '连接')),
@@ -553,7 +544,7 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
         const Text('连接 → 上电 → 站立\n上电准备运动服务，站立使关节归位。',
             style: TextStyle(color: muted, fontSize: 12)),
         const Divider(),
-        const Text('鸭控 DuckPilot 0.3.0 · 密钥仅保存在本次内存中',
+        const Text('鸭控 DuckPilot 0.4.0 · 局域网直连',
             style: TextStyle(color: muted, fontSize: 11)),
         for (final line in c.logs.take(10))
           Text(line, style: const TextStyle(fontSize: 10)),

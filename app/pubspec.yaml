@@ -1,13 +1,12 @@
 name: microduck_lew
-description: Android landscape controller for mircoduck-lew using authenticated UDP.
+description: Android landscape controller for mircoduck-lew using keyless LAN UDP.
 publish_to: none
-version: 0.3.0+3
+version: 0.4.0+4
 environment:
   sdk: '>=3.4.0 <4.0.0'
 dependencies:
   flutter:
     sdk: flutter
-  crypto: ^3.0.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

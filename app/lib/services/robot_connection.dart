@@ -20,7 +20,6 @@ class RobotConnection extends ChangeNotifier {
   int _port = 20043, _seq = 0, _receiveSeq = -1, _generation = 0;
   int _ticks = 0;
   String _sid = '', _ticket = '';
-  List<int> _key = [];
   Timer? _ticker;
   DateTime? _lastPacket, _ticketAt;
   Completer<void>? _hello;
@@ -57,11 +56,10 @@ class RobotConnection extends ChangeNotifier {
     changed();
   }
 
-  Future<void> connect(String host, int port, String secret) async {
+  Future<void> connect(String host, int port) async {
     if (host.trim().isEmpty || port < 1 || port > 65535) {
       throw const FormatException('请填写主板地址和 UDP 端口');
     }
-    final key = pairingKey(secret);
     await disconnect();
     final generation = ++_generation;
     link = LinkState.connecting;
@@ -76,7 +74,6 @@ class RobotConnection extends ChangeNotifier {
       if (generation != _generation) return;
       _address = addresses.first;
       _port = port;
-      _key = key;
       _sid = List.generate(
         16,
         (_) =>
@@ -114,7 +111,7 @@ class RobotConnection extends ChangeNotifier {
       if (generation != _generation) return;
       link = LinkState.live;
       _ticker = Timer.periodic(const Duration(milliseconds: 20), (_) => tick());
-      log('已认证连接 · UDP $_port');
+      log('已连接 · UDP $_port');
     } catch (e) {
       await disconnect();
       error = '$e';
@@ -126,7 +123,7 @@ class RobotConnection extends ChangeNotifier {
   void _receive(Datagram d) {
     if (d.address.address != _address?.address || d.port != _port) return;
     try {
-      final m = decodePacket(_key, d.data);
+      final m = decodePacket(d.data);
       final sequence = m['seq'];
       if (m['sid'] != _sid || sequence is! int || sequence <= _receiveSeq) {
         return;
@@ -183,9 +180,9 @@ class RobotConnection extends ChangeNotifier {
       }
       changed();
     } on FormatException {
-      /* Ignore unauthenticated or malformed network traffic. */
+      /* Ignore malformed network traffic. */
     } on TypeError {
-      /* A malformed authenticated status must not break the receive loop. */
+      /* A malformed status must not break the receive loop. */
     }
   }
 
@@ -204,8 +201,8 @@ class RobotConnection extends ChangeNotifier {
     }
     final sequence = ++_seq;
     peer.send(
-      encodePacket(_key, {
-        'v': 1,
+      encodePacket({
+        'v': 2,
         'sid': _sid,
         'seq': sequence,
         'op': op,

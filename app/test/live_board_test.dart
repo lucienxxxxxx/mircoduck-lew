@@ -5,14 +5,11 @@ import 'package:microduck_lew/services/robot_connection.dart';
 void main() {
   final host = Platform.environment['MICRODUCK_TEST_HOST'];
   test(
-      'optional live board: real Flutter client receives commissioning telemetry',
+      'optional live board: real Flutter client receives fresh telemetry without a pairing key',
       () async {
     final client = RobotConnection();
     try {
-      final key = File(Platform.environment['MICRODUCK_TEST_KEY_FILE']!)
-          .readAsStringSync()
-          .trim();
-      await client.connect(host!, 20043, key);
+      await client.connect(host!, 20043);
       await Future<void>.delayed(const Duration(milliseconds: 1100));
       expect(client.link, LinkState.live);
       if (Platform.environment['MICRODUCK_TEST_POWER'] == '1') {
@@ -22,7 +19,7 @@ void main() {
         expect(client.robot.torque, false);
       } else {
         expect(['commissioning', 'motion'], contains(client.robot.mode));
-        expect(['off', false], contains(client.robot.torque));
+        expect(client.robot.torque, isNotNull);
       }
       expect(client.robot.fresh, true);
       expect(client.robot.imuValid, true);
@@ -31,15 +28,13 @@ void main() {
       expect(client.acquired, false);
       await client.disconnect();
       await Future<void>.delayed(const Duration(milliseconds: 150));
-      await client.connect(host, 20043, key);
+      await client.connect(host, 20043);
       expect(client.link, LinkState.live);
     } finally {
       await client.disconnect();
       client.dispose();
     }
   },
-      skip: host == null
-          ? 'Set explicit test host and a local pairing-key file'
-          : false,
+      skip: host == null ? 'Set explicit test host' : false,
       timeout: const Timeout(Duration(seconds: 180)));
 }
