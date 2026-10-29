@@ -135,8 +135,9 @@ class Telemetry:
 
 
 class Gateway:
-    def __init__(self, control, telemetry, clock=time.monotonic):
+    def __init__(self, control, telemetry, clock=time.monotonic, port=20043, camera_port=8443):
         self.control, self.telemetry, self.clock = control, telemetry, clock
+        self.port, self.camera_port = port, camera_port
         self.session = None
         self.used_sids = set()
         self.job = None
@@ -173,6 +174,14 @@ class Gateway:
         message = decode(wire)
         now = self.clock()
         self.expire()
+        if message.get('op') == 'discover':
+            nonce = message.get('nonce')
+            if not isinstance(nonce,str) or len(nonce)!=32 or any(c not in '0123456789abcdef' for c in nonce):
+                raise ValueError('Invalid discovery nonce')
+            # Discovery does not reserve a phone session or send actuator intent.
+            return encode({'v':2,'op':'discover','service':'mircoduck-lew','nonce':nonce,
+                           'control_port':self.port,'camera_port':self.camera_port,
+                           'busy':self.session is not None})
         if message.get('op') == 'hello':
             sid = message.get('sid')
             if not isinstance(sid,str) or len(sid) != 32 or any(c not in '0123456789abcdef' for c in sid):
@@ -250,11 +259,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bind', default='0.0.0.0')
     parser.add_argument('--port', type=int, default=20043)
+    parser.add_argument('--camera-port', type=int, default=8443)
     parser.add_argument('--socket', default='/run/robotd.sock')
     args = parser.parse_args()
     telemetry = Telemetry(args.socket)
     control = remote.Input(remote.Robot(args.socket))
-    gateway = Gateway(control, telemetry)
+    gateway = Gateway(control, telemetry, port=args.port, camera_port=args.camera_port)
     peer = remote.monitor()
     control.hotplug(remote.devices())
     def drain():

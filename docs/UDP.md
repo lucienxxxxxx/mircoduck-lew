@@ -16,6 +16,10 @@ Payloads include `v:2`, `sid` (fresh random 16-byte lowercase hex nonce), intege
 
 After hello, each request echoes a server-issued `ticket`. Tickets rotate approximately every 350–400 ms and have an absolute 450 ms validity from issue. A short overlap accepts the preceding ticket only until its original expiry, tolerating a packet delivery race without extending buffered input lifetime. Requests must advance the client sequence; endpoint, session and ticket all have to match. The server sends status at 10 Hz, carrying fresh tickets; a client must keep draining its receive queue.
 
+## Stateless discovery (0.4.1)
+
+`discover` carries a random 32-hex `nonce`. The response echoes it with `service:mircoduck-lew`, `control_port`, `camera_port` and `busy`. It does not create or renew a session, acquire input, or send actuator commands. The Android App probes only its current Wi-Fi gateway; see [AP auto-connect](AP-AUTO-CONNECT.md).
+
 ## Requests
 
 | op | Fields and behavior |

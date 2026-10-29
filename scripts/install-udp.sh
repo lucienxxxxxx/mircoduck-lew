@@ -16,12 +16,12 @@ if [[ -L /usr/local/bin/duckctl && $(readlink /usr/local/bin/duckctl) != /opt/mi
 fi
 ln -sfn /opt/mircoduck-lew/cli/duckctl.py /usr/local/bin/duckctl
 install -d -m 755 /opt/mircoduck-lew/docs
-install -m 644 "$root/docs/CLI.md" "$root/docs/DUCKPILOT.md" "$root/docs/UDP.md" /opt/mircoduck-lew/docs/
+install -m 644 "$root/docs/CLI.md" "$root/docs/DUCKPILOT.md" "$root/docs/UDP.md" "$root/docs/AP-AUTO-CONNECT.md" /opt/mircoduck-lew/docs/
 install -m 644 "$root/gateway/mircoduck-udp.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable mircoduck-udp.service
 systemctl restart mircoduck-udp.service
 systemctl is-active mircoduck-udp.service
 echo 'UDP adapter installed on port 20043. No motion/torque command was sent.'
-echo 'DuckPilot 0.4: connect by address and port; no pairing key is used.'
+echo 'DuckPilot 0.4.1: AP gateway discovery enabled; no pairing key is used.'
 echo 'Board CLI installed: duckctl --help; duckctl wifi --help'

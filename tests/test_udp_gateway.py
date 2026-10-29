@@ -54,6 +54,25 @@ class DatagramTests(unittest.TestCase):
         self.assertEqual(self.control.frames,[])
         self.assertFalse(self.gateway.session.claimed)
 
+    def test_discovery_is_stateless_and_does_not_steal_an_existing_session(self):
+        session=self.gateway.session
+        response=decode(self.gateway.request(encode({'v':2,'op':'discover','nonce':'ab'*16}),('127.0.0.2',30001)))
+        self.assertEqual(response['service'],'mircoduck-lew')
+        self.assertEqual(response['nonce'],'ab'*16)
+        self.assertTrue(response['busy'])
+        self.assertIs(self.gateway.session,session)
+        self.assertEqual(self.control.frames,[])
+        self.gateway.session=None
+        response=decode(self.gateway.request(encode({'v':2,'op':'discover','nonce':'cd'*16}),ADDRESS))
+        self.assertFalse(response['busy'])
+        self.assertIsNone(self.gateway.session)
+        self.assertEqual(self.control.robot.calls,[])
+
+    def test_bad_discovery_nonce_is_rejected(self):
+        for nonce in [None,'bad',3,'G'*32]:
+            with self.assertRaises(ValueError):
+                self.gateway.request(encode({'v':2,'op':'discover','nonce':nonce}),ADDRESS)
+
     def test_short_call_does_not_enable_or_home_motors(self):
         self.send('claim');self.send('action',action='chirp')
         self.assertEqual(self.control.robot.calls,[('robot.sound',{'tag':'chirp'})])

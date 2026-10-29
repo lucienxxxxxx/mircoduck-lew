@@ -1,5 +1,12 @@
 # Validation record
 
+## AP auto-connect 0.4.1 (2026-10-29)
+
+- Detects the current Android Wi-Fi IPv4 gateway, verifies a stateless DuckPilot UDP discovery response, and connects telemetry/video without typed IP or motor intent.
+- Android process routing selects Wi-Fi even when cellular remains the default network; no SSID/location permission.
+- 34 Linux Python tests and 18 Flutter tests pass, analyze is clean, ARM64 APK builds. Tests include UDP discovery, custom subnets, incorrect responses, busy sessions, explicit disconnect, stale discovery after network changes and background cancellation.
+- No native Android handset/AP acceptance test. The board is charging/unavailable; new discovery handler has not been deployed to the physical board. Prior 0.4.0 hardware tests remain historical evidence only.
+
 ## DuckPilot / duckctl 0.4.0 (2026-10-29)
 
 - Keyless UDP v2 replaces signed v1; matching App and gateway required.

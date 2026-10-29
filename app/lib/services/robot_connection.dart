@@ -113,9 +113,11 @@ class RobotConnection extends ChangeNotifier {
       _ticker = Timer.periodic(const Duration(milliseconds: 20), (_) => tick());
       log('已连接 · UDP $_port');
     } catch (e) {
-      await disconnect();
-      error = '$e';
-      changed();
+      if (generation == _generation) {
+        await disconnect();
+        error = '$e';
+        changed();
+      }
       rethrow;
     }
   }

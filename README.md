@@ -4,7 +4,7 @@
 
 由 [lucienxxxxxx](https://github.com/lucienxxxxxx) 维护，基于 [kissqy/Microduck-kissqy](https://github.com/kissqy/Microduck-kissqy) 和 [Pollen Robotics Microduck](https://github.com/pollen-robotics/microduck) 整理。保留上游署名、版权头及分项许可；本项目不是官方发布。
 
-**当前版本：0.4.0；手机 App：鸭控 DuckPilot；robotd 构建：`1fa8438-feetech-control.43-ft01.1`，IPC API40；手机 UDP 协议 v2。**
+**当前版本：0.4.1；手机 App：鸭控 DuckPilot；robotd 构建：`1fa8438-feetech-control.43-ft01.1`，IPC API40；手机 UDP 协议 v2。**
 
 ## 这个版本做了什么
 
@@ -38,6 +38,9 @@ PROJECT.json              版本与来源记录
 ```
 
 ## 手机控制
+
+**0.4.1：手机连上鸭子热点后，自动检测网关并连接，无需再填 IP。** [配置与实现说明](docs/AP-AUTO-CONNECT.md)。App 和主板接入层都需更新。
+
 
 主板安装接入层：`sudo bash scripts/install-udp.sh`。手机与主板接入同一局域网，填写自己的主板地址、UDP 端口 `20043`，无需密钥。相机使用现有 mediad WebRTC 信令端口 `8443`。操作顺序为“连接 → 上电 → 站立”；控制权租期在内部处理。
 
@@ -82,7 +85,7 @@ bash scripts/build-robotd.sh
 - 标定状态显示修复后的相关测试：5 通过 / 0 失败。
 - WSL ARM64 release 构建、ELF 检查和 QEMU 启动检查通过。
 - 2026-10-24 实机 commissioning 约 50 Hz，观察窗口内连续 1,994 轮成功、零通信失败，IMU ready/valid、15 个舵机反馈齐全。
-- 手机当前：24 项 Python 检查、9 项 App 自动化检查通过；真实相机以同一视频脚本实测 1280×720、30 FPS；Flutter 客户端的上电服务准备与读取 15 关节/IMU 已实测。尚未在 Android 手机上安装验收或进行实机运动验收。
+- 手机当前：34 项 Python 检查、18 项 App 自动化检查通过，静态检查和 ARM64 APK 构建通过。0.4.1 热点自动连接尚未在 Android 手机/AP 实机验收，新发现协议待主板充电后安装；历史相机/遥测记录见 VALIDATION.md。
 
 详情与限制见 [docs/VALIDATION.md](docs/VALIDATION.md)。私人硬件原始日志未公开。
 

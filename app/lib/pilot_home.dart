@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'models/robot.dart';
 import 'services/robot_connection.dart';
 import 'services/camera_controller.dart';
+import 'services/ap_connection.dart';
 import 'widgets/camera_backdrop.dart';
 import 'widgets/phone_stick.dart';
 import 'widgets/style.dart';
@@ -19,6 +20,14 @@ class PhoneHome extends StatefulWidget {
 class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
   late final c = widget.connection ?? RobotConnection();
   late final camera = widget.camera ?? CameraController();
+  late final ap = ApConnection(c,
+      onConnected: (board) {
+        host.text = board.host;
+        port.text = '${board.controlPort}';
+        cameraPort.text = '${board.cameraPort}';
+        connectCamera();
+      },
+      onDisconnected: () => camera.disconnect());
   final scaffold = GlobalKey<ScaffoldState>();
   final host = TextEditingController(text: 'microduck.local');
   final port = TextEditingController(text: '20043');
@@ -35,6 +44,8 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
     super.initState();
     c.addListener(changed);
     camera.addListener(changed);
+    ap.addListener(changed);
+    unawaited(ap.start());
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -45,11 +56,10 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) {
-      c.stop();
-      unawaited(c.release().catchError((Object _) {}));
-      camera.disconnect();
-    } else if (connected) {
-      connectCamera();
+      unawaited(ap.foreground(false));
+    } else {
+      unawaited(ap.foreground(true));
+      if (connected) connectCamera();
     }
   }
 
@@ -58,6 +68,8 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     c.removeListener(changed);
     camera.removeListener(changed);
+    ap.removeListener(changed);
+    ap.dispose();
     if (widget.connection == null) c.dispose();
     if (widget.camera == null) camera.dispose();
     host.dispose();
@@ -98,6 +110,7 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
     if (videoPort < 1 || videoPort > 65535) {
       throw const FormatException('相机端口无效');
     }
+    ap.pauseForUser();
     await c.connect(host.text.trim(), int.tryParse(port.text) ?? 0);
     connectCamera();
     if (mounted) Navigator.pop(context);
@@ -302,6 +315,7 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
                     ? null
                     : () {
                         if (connected) {
+                          ap.pauseForUser();
                           camera.disconnect();
                           unawaited(perform(c.disconnect));
                         } else {
@@ -544,7 +558,8 @@ class _PhoneHomeState extends State<PhoneHome> with WidgetsBindingObserver {
         const Text('连接 → 上电 → 站立\n上电准备运动服务，站立使关节归位。',
             style: TextStyle(color: muted, fontSize: 12)),
         const Divider(),
-        const Text('鸭控 DuckPilot 0.4.0 · 局域网直连',
+        Text(ap.message, style: const TextStyle(color: muted, fontSize: 11)),
+        const Text('鸭控 DuckPilot 0.4.1 · 局域网直连',
             style: TextStyle(color: muted, fontSize: 11)),
         for (final line in c.logs.take(10))
           Text(line, style: const TextStyle(fontSize: 10)),

@@ -5,6 +5,53 @@ import 'package:microduck_lew/services/robot_connection.dart';
 import 'package:microduck_lew/services/wire.dart';
 
 void main() {
+  test('timed-out previous connect cannot disconnect a newer connection',
+      () async {
+    final server =
+        await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final firstHello = Completer<void>();
+    final client = RobotConnection();
+    var seq = 0;
+    server.listen((event) {
+      if (event != RawSocketEvent.read) return;
+      Datagram? d;
+      while ((d = server.receive()) != null) {
+        final message = decodePacket(d!.data);
+        if (message['op'] == 'hello' && !firstHello.isCompleted) {
+          firstHello.complete();
+          continue; // Simulate a handshake lost on the previous Wi-Fi.
+        }
+        server.send(
+            encodePacket({
+              'v': 2,
+              'op': message['op'] == 'hello' ? 'hello' : 'pong',
+              'sid': message['sid'],
+              'seq': ++seq,
+              'ticket': 'current-ticket',
+              'accepted': true
+            }),
+            d.address,
+            d.port);
+      }
+    });
+    Object? canceled;
+    try {
+      final old =
+          client.connect('127.0.0.1', server.port).catchError((Object e) {
+        canceled = e;
+      });
+      await firstHello.future.timeout(const Duration(seconds: 2));
+      await client.connect('127.0.0.1', server.port);
+      await old;
+      expect(canceled, isA<TimeoutException>());
+      expect(client.link, LinkState.live);
+      expect(client.error, isNull);
+    } finally {
+      await client.disconnect();
+      client.dispose();
+      server.close();
+    }
+  });
   test(
       'real UDP socket connects without a key, claims explicitly, and clears stale input',
       () async {

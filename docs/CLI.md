@@ -75,6 +75,10 @@ sudo duckctl service restart mircoduck-udp
 
 如需开机开启相机服务：`sudo systemctl enable mediad`。mediad 沿用已安装的参数与摄像头配置，有客户端时才进行实际视频采集。服务命令不修改配置。NetworkManager 和 robotd 只允许查询状态，不把任意重启/停止作为控制动作。
 
+## 手机自动连接
+
+App 与主板接入层都更新至 0.4.1 后，手机连上鸭子热点即可自动识别网关并连接，不必手填 IP。见 [AP 自动连接说明](AP-AUTO-CONNECT.md)。STA/AP 模式切换仍由本 CLI 明确请求。
+
 ## STA 与 AP 是什么
 
 | 模式 | 使用方式 | 手机填写的主板地址 |
